@@ -1,0 +1,13 @@
+# Puzzle inputs — AoC asks that these are not republished
+input.txt
+
+# Per-day bench output (aggregated into benchmarks.md)
+bench.md
+
+# Build artifacts
+target/
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+solution

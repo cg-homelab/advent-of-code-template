@@ -11,3 +11,11 @@ node_modules/
 __pycache__/
 *.pyc
 solution
+
+# .NET / Zig build artifacts
+bin/
+obj/
+out/
+TestResults/
+.zig-cache/
+zig-out/

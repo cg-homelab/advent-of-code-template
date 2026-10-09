@@ -13,7 +13,9 @@ artifact directly, so the task-runner wrapper never affects the numbers.
 - [just](https://github.com/casey/just) — task runner
 - [hyperfine](https://github.com/sharkdp/hyperfine) — benchmarking
 - Python 3 — scaffolding/aggregation scripts (stdlib only)
-- Per language, only if you use it: `cargo` (rust), `go`, [`uv`](https://github.com/astral-sh/uv) (python), [`bun`](https://bun.sh) (ts), `php`
+- Per language, only if you use it: `cargo` (rust), `go`, [`uv`](https://github.com/astral-sh/uv) (python), [`bun`](https://bun.sh) (ts), `php`, [.NET 10 SDK](https://dotnet.microsoft.com/download) (csharp, fsharp), [`zig`](https://ziglang.org/download/) 0.17+
+- C#/F# `just build` and `just bench` publish a Native AOT binary, which needs a C toolchain (Xcode Command Line Tools on macOS, `clang` + `zlib1g-dev` on Linux, the Visual Studio C++ workload on Windows). The first publish downloads the ILCompiler packages. `just run` uses `dotnet run` (JIT) for fast iteration, while `just bench` times the AOT binary.
+  If your `dotnet` comes from Homebrew (a non-portable build), the AOT link step may fail with `ld: library 'ssl' not found`; fix it with `export LIBRARY_PATH=/opt/homebrew/opt/openssl@3/lib:/opt/homebrew/opt/brotli/lib`.
 
 On Windows, install [Git for Windows](https://gitforwindows.org/) and point
 just at its shell by adding this to the root `justfile`:
@@ -34,7 +36,7 @@ just bench-all          # bench every day, aggregate -> benchmarks.md
 just test-all           # run every day's tests
 ```
 
-Languages: `rust`, `go`, `python`, `ts`, `php` (see `lang-templates/`).
+Languages: `rust`, `go`, `python`, `ts`, `php`, `csharp`, `fsharp`, `zig` (see `lang-templates/`).
 
 ## Per-day contract
 

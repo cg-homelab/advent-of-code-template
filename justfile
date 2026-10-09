@@ -21,11 +21,39 @@ test day:
 bench day:
     @just --justfile "$(printf 'days/day-%02d' {{day}})/justfile" bench
 
-# Run every day's tests
+# Run every day's tests; attempts all days, exits non-zero if any failed
 test-all:
-    @for d in days/day-*/; do [ -d "$d" ] || continue; echo "== $d"; just --justfile "$d/justfile" test; done
+    #!/usr/bin/env sh
+    failed=""
+    for d in days/day-*/; do
+        [ -d "$d" ] || continue
+        if [ ! -f "$d/justfile" ]; then
+            echo "skip $d (no justfile)"
+            continue
+        fi
+        echo "== $d"
+        just --justfile "$d/justfile" test || failed="$failed $d"
+    done
+    if [ -n "$failed" ]; then
+        echo "FAILED:$failed" >&2
+        exit 1
+    fi
 
-# Benchmark every day, then aggregate into benchmarks.md
+# Benchmark every day, then aggregate into benchmarks.md (only if no day failed)
 bench-all:
-    @for d in days/day-*/; do [ -d "$d" ] || continue; echo "== $d"; just --justfile "$d/justfile" bench; done
+    #!/usr/bin/env sh
+    failed=""
+    for d in days/day-*/; do
+        [ -d "$d" ] || continue
+        if [ ! -f "$d/justfile" ]; then
+            echo "skip $d (no justfile)"
+            continue
+        fi
+        echo "== $d"
+        just --justfile "$d/justfile" bench || failed="$failed $d"
+    done
+    if [ -n "$failed" ]; then
+        echo "FAILED:$failed" >&2
+        exit 1
+    fi
     python3 scripts/collect_benches.py

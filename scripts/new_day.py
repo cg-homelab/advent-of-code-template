@@ -3,18 +3,47 @@
 
 Usage: python3 scripts/new_day.py <day 1-25> <lang>
 
-Copies lang-templates/<lang> to days/day-NN, replaces the __DAY__ token with the
+Copies the git-tracked files of lang-templates/<lang> to days/day-NN, replaces the __DAY__ token with the
 zero-padded day number in file contents and names, and creates an empty
 input.txt (gitignored) ready for the puzzle input to be pasted in.
 """
 
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 TEMPLATES = ROOT / "lang-templates"
 TOKEN = "__DAY__"
+ARTIFACT_DIRS = (
+    "bin",
+    "obj",
+    "out",
+    "target",
+    "node_modules",
+    ".venv",
+    "__pycache__",
+    ".zig-cache",
+    "zig-out",
+    ".pytest_cache",
+    "TestResults",
+)
+
+
+def tracked_files(src: Path) -> list[Path] | None:
+    """Template files tracked by git, relative to src; None if git is unusable."""
+    try:
+        result = subprocess.run(
+            ["git", "ls-files", "-z", "--", str(src.relative_to(ROOT))],
+            cwd=ROOT,
+            capture_output=True,
+            check=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    names = [n for n in result.stdout.decode().split("\0") if n]
+    return [Path(n).relative_to(src.relative_to(ROOT)) for n in names]
 
 
 def fail(message: str) -> None:
@@ -46,7 +75,20 @@ def main() -> None:
         fail(f"days/{dest.name} already exists")
 
     dest.parent.mkdir(exist_ok=True)
-    shutil.copytree(src, dest)
+    files = tracked_files(src)
+    if files is None:
+        print(
+            "warning: git unavailable, copying whole template dir (skipping known artifact dirs)",
+            file=sys.stderr,
+        )
+        shutil.copytree(src, dest, ignore=shutil.ignore_patterns(*ARTIFACT_DIRS))
+    else:
+        if not files:
+            fail(f"no git-tracked files found in lang-templates/{lang}")
+        for rel in files:
+            target = dest / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src / rel, target)
 
     # Depth-first so renames don't invalidate child paths.
     for path in sorted(dest.rglob("*"), key=lambda p: len(p.parts), reverse=True):

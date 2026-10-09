@@ -28,7 +28,7 @@ pub fn main(init: std.process.Init) !u8 {
     const answer = try process(arena, input);
 
     var buffer: [256]u8 = undefined;
-    var stdout = std.Io.File.stdout().writer(io, &buffer);
+    var stdout = std.Io.File.stdout().writerStreaming(io, &buffer);
     try stdout.interface.print("{s}\n", .{answer});
     try stdout.interface.flush();
     return 0;

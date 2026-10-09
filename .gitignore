@@ -1,21 +1,38 @@
 # Puzzle inputs — AoC asks that these are not republished
-input.txt
+/days/*/input.txt
 
 # Per-day bench output (aggregated into benchmarks.md)
-bench.md
+/days/*/bench.md
 
 # Build artifacts
-target/
-node_modules/
-.venv/
-__pycache__/
-*.pyc
-solution
+/days/**/target/
+/lang-templates/**/target/
+/days/**/node_modules/
+/lang-templates/**/node_modules/
+/days/**/.venv/
+/lang-templates/**/.venv/
+/days/**/__pycache__/
+/lang-templates/**/__pycache__/
+/days/**/*.pyc
+/lang-templates/**/*.pyc
+/days/**/.pytest_cache/
+/lang-templates/**/.pytest_cache/
+/days/*/solution
+/lang-templates/*/solution
 
 # .NET / Zig build artifacts
-bin/
-obj/
-out/
-TestResults/
-.zig-cache/
-zig-out/
+/days/**/bin/
+/lang-templates/**/bin/
+/days/**/obj/
+/lang-templates/**/obj/
+/days/**/out/
+/lang-templates/**/out/
+/days/**/TestResults/
+/lang-templates/**/TestResults/
+/days/**/.zig-cache/
+/lang-templates/**/.zig-cache/
+/days/**/zig-out/
+/lang-templates/**/zig-out/
+
+# macOS
+.DS_Store

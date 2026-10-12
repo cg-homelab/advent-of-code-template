@@ -13,6 +13,7 @@
 /lang-templates/**/.venv/
 /days/**/__pycache__/
 /lang-templates/**/__pycache__/
+/scripts/__pycache__/
 /days/**/*.pyc
 /lang-templates/**/*.pyc
 /days/**/.pytest_cache/

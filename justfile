@@ -17,9 +17,10 @@ run day part:
 test day:
     @just --justfile "$(printf 'days/day-%02d' {{day}})/justfile" test
 
-# Benchmark a day (writes days/day-NN/bench.md): just bench 3
+# Benchmark a day and refresh benchmarks.md: just bench 3
 bench day:
     @just --justfile "$(printf 'days/day-%02d' {{day}})/justfile" bench
+    python3 scripts/collect_benches.py
 
 # Run every day's tests; attempts all days, exits non-zero if any failed
 test-all:

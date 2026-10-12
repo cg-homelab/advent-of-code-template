@@ -31,8 +31,8 @@ just new-day 3 rust     # scaffold days/day-03/ from lang-templates/rust
 # paste your puzzle input into days/day-03/input.txt
 just run 3 1            # run part 1
 just test 3             # tests against example input
-just bench 3            # hyperfine both parts -> days/day-03/bench.md
-just bench-all          # bench every day, aggregate -> benchmarks.md
+just bench 3            # hyperfine both parts -> days/day-03/bench.md, then refresh benchmarks.md
+just bench-all          # bench every day, then refresh benchmarks.md
 just test-all           # run every day's tests
 ```
 
@@ -55,8 +55,16 @@ Templates ship a working placeholder (part 1: line count, part 2: total
 characters across lines) so everything passes right after scaffolding.
 
 `input.txt` and `bench.md` are gitignored — AoC asks that puzzle inputs are
-not republished, and per-day bench output is aggregated into the committed
-`benchmarks.md`.
+not republished. Both `just bench <day>` and `just bench-all` merge the
+per-day `bench.md` into `benchmarks.md`: each `## day-NN` section is replaced
+only when that day is benchmarked, and carries the date, machine and commit it
+was produced on. `benchmarks.md` is meant to be committed. Hyperfine's
+relative columns are dropped, since they compare part 1 against part 2.
+
+## CI
+
+`.github/workflows/ci.yml` scaffolds every language template on Ubuntu and
+runs test, run and bench on pushes, pull requests and a weekly schedule.
 
 ## Adding a language
 

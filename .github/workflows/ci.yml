@@ -1,0 +1,190 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # Mondays 06:00 UTC: catch toolchain churn (Zig, .NET, ...) without a push
+    - cron: "0 6 * * 1"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: 1
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+
+jobs:
+  scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Unit tests
+        run: python3 -m unittest discover -s scripts -p 'test_*.py'
+      - name: Byte-compile scripts
+        run: python3 -m py_compile scripts/*.py
+
+  templates:
+    name: template (${{ matrix.lang }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        lang: [rust, go, python, ts, php, csharp, fsharp, zig]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install just and hyperfine
+        uses: taiki-e/install-action@v2
+        with:
+          tool: just,hyperfine
+
+      - name: Set up Rust
+        if: matrix.lang == 'rust'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up Go
+        if: matrix.lang == 'go'
+        uses: actions/setup-go@v7
+        with:
+          go-version: stable
+          cache: false
+
+      - name: Set up uv
+        if: matrix.lang == 'python'
+        uses: astral-sh/setup-uv@v10
+
+      - name: Set up Bun
+        if: matrix.lang == 'ts'
+        uses: oven-sh/setup-bun@v2
+
+      - name: Set up PHP
+        if: matrix.lang == 'php'
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+
+      - name: Set up .NET
+        if: matrix.lang == 'csharp' || matrix.lang == 'fsharp'
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install Native AOT prerequisites
+        if: matrix.lang == 'csharp' || matrix.lang == 'fsharp'
+        run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev
+
+      - name: Set up Zig
+        if: matrix.lang == 'zig'
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.17.0
+
+      # The checkout is disposable. Year repos created from this template
+      # already have committed days (including day-01), which would make
+      # `just new-day 1` fail with "already exists".
+      - name: Clear committed days
+        run: rm -rf days benchmarks.md
+
+      - name: Scaffold day 1
+        run: just new-day 1 ${{ matrix.lang }}
+
+      - name: Write sample input
+        run: printf 'foo\nbar\nbaz\n' > days/day-01/input.txt
+
+      - name: Test
+        run: just test 1
+
+      - name: Run part 1 and part 2
+        run: |
+          set -euo pipefail
+          p1="$(just run 1 1 2>/dev/null)"
+          p2="$(just run 1 2 2>/dev/null)"
+          echo "part1=[$p1] part2=[$p2]"
+          [ "$p1" = "3" ] || { echo "part 1: expected 3, got '$p1'" >&2; exit 1; }
+          [ "$p2" = "9" ] || { echo "part 2: expected 9, got '$p2'" >&2; exit 1; }
+
+      - name: Benchmark
+        run: |
+          set -euo pipefail
+          just bench 1
+          test -f days/day-01/bench.md
+          grep -q '^## day-01' benchmarks.md
+
+      - name: Templates stayed clean
+        run: |
+          status="$(git status --porcelain -- lang-templates scripts justfile README.md)"
+          if [ -n "$status" ]; then
+            echo "scaffolding modified tracked repo files:" >&2
+            echo "$status" >&2
+            exit 1
+          fi
+
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      has_days: ${{ steps.check.outputs.has_days }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: check
+        shell: bash
+        run: |
+          if ls -d days/day-*/justfile >/dev/null 2>&1; then
+            echo "has_days=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_days=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # Validates the committed days of a year repo; skipped in the bare template.
+  days:
+    needs: detect
+    if: needs.detect.outputs.has_days == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install just and hyperfine
+        uses: taiki-e/install-action@v2
+        with:
+          tool: just,hyperfine
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: stable
+          cache: false
+
+      - uses: astral-sh/setup-uv@v10
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install Native AOT prerequisites
+        run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev
+
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.17.0
+
+      - name: Test all days
+        run: just test-all

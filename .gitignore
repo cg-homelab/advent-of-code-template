@@ -1,7 +1,7 @@
 # Puzzle inputs — AoC asks that these are not republished
 /days/*/input.txt
 
-# Per-day bench output (aggregated into benchmarks.md)
+# Per-solution bench output (aggregated into benchmarks.md)
 /days/*/bench.md
 
 # Build artifacts

@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""Merge every days/day-NN/bench.md (hyperfine markdown export) into benchmarks.md.
+"""Merge every days/day-NN-<lang>-vN/bench.md (hyperfine markdown export) into benchmarks.md.
 
-Sections already in benchmarks.md are kept unless a fresh bench.md exists for
-that day or the day directory is gone.
+Each solution directory gets its own `## day-NN-<lang>-vN` section, ordered by
+(day, lang, version). Sections already in benchmarks.md are kept unless a fresh
+bench.md exists for that solution or its directory is gone.
 """
+
+from __future__ import annotations
 
 import platform
 import re
@@ -13,6 +16,10 @@ from collections.abc import Callable
 from datetime import date
 from pathlib import Path
 
+# Import the sibling module even under `python -P` / PYTHONSAFEPATH.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from resolve_day import DIR_RE, solution_key  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent
 
 HEADING = "# Benchmarks"
@@ -21,7 +28,8 @@ INTRO = (
     "numbers from different machines are not comparable."
 )
 DROP_COLUMNS = {"change", "factor", "relative"}
-SECTION_RE = re.compile(r"^## (day-\d+)[ \t]*$", re.MULTILINE)
+# Any level-2 heading; only names matching DIR_RE are kept (see parse_sections).
+SECTION_RE = re.compile(r"^## (\S+)[ \t]*$", re.MULTILINE)
 SEPARATOR_CELL_RE = re.compile(r"^:?-+:?$")
 CELL_SPLIT_RE = re.compile(r"(?<!\\)\|")
 
@@ -108,11 +116,21 @@ def clean_table(text: str) -> str:
     return "\n".join([emit(header), "|" + "|".join(separator[i] for i in keep) + "|"] + [emit(r) for r in rows])
 
 
+def sorted_sections(sections: dict[str, str]) -> dict[str, str]:
+    """Order sections by (day, lang, version)."""
+    return {name: sections[name] for name in sorted(sections, key=solution_key)}
+
+
 def parse_sections(text: str) -> dict[str, str]:
-    """Split a benchmarks.md into {day-NN: body}, body excluding the heading."""
+    """Split a benchmarks.md into {day-NN-<lang>-vN: body}, body excluding the heading.
+
+    Sections under any other `## ` heading (e.g. an old `## day-02`) are dropped.
+    """
     matches = list(SECTION_RE.finditer(text))
     sections: dict[str, str] = {}
     for i, m in enumerate(matches):
+        if not DIR_RE.match(m.group(1)):
+            continue
         end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
         sections[m.group(1)] = text[m.end():end].strip()
     return sections
@@ -130,26 +148,26 @@ def merge_sections(
 ) -> dict[str, str]:
     """Merge existing benchmarks.md text with the bench.md files under root/days.
 
-    A day's section is replaced only when it has no section yet or its bench.md
+    A solution's section is replaced only when it has no section yet or its bench.md
     is newer than benchmarks.md (existing_mtime; None means every bench.md is newer).
     """
     sections = parse_sections(existing)
     days_dir = root / "days"
-    present = {p.name for p in days_dir.glob("day-*") if p.is_dir()}
-    sections = {day: body for day, body in sections.items() if day in present}
-    for day in present:
-        bench = days_dir / day / "bench.md"
+    present = {p.name for p in days_dir.glob("day-*") if p.is_dir() and DIR_RE.match(p.name)}
+    sections = {name: body for name, body in sections.items() if name in present}
+    for name in present:
+        bench = days_dir / name / "bench.md"
         if not bench.is_file():
             continue
         mtime = bench.stat().st_mtime
-        if day in sections and existing_mtime is not None and mtime <= existing_mtime:
+        if name in sections and existing_mtime is not None and mtime <= existing_mtime:
             continue
-        sections[day] = build_section(bench.read_text(), metadata(date.fromtimestamp(mtime)))
-    return dict(sorted(sections.items()))
+        sections[name] = build_section(bench.read_text(), metadata(date.fromtimestamp(mtime)))
+    return sorted_sections(sections)
 
 
 def render(sections: dict[str, str]) -> str:
-    body = "\n\n".join(f"## {day}\n\n{text}" for day, text in sorted(sections.items()))
+    body = "\n\n".join(f"## {name}\n\n{text}" for name, text in sorted_sections(sections).items())
     return f"{HEADING}\n\n{INTRO}\n\n{body}\n"
 
 
@@ -165,12 +183,15 @@ def collect(root: Path, metadata: Callable[[date], str]) -> str | None:
 def main() -> None:
     content = collect(ROOT, metadata_line)
     if content is None:
-        print("no days/day-*/bench.md files found — run `just bench <day>` first", file=sys.stderr)
+        print(
+            "no days/day-NN-<lang>-vN/bench.md files found — run `just bench <day>` first",
+            file=sys.stderr,
+        )
         sys.exit(1)
     out = ROOT / "benchmarks.md"
     out.write_text(content)
-    count = len(SECTION_RE.findall(content))
-    print(f"wrote {out.name} ({count} days)")
+    count = len(parse_sections(content))
+    print(f"wrote {out.name} ({count} solutions)")
 
 
 if __name__ == "__main__":

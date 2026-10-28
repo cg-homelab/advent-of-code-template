@@ -31,65 +31,20 @@ jobs:
       - name: Byte-compile scripts
         run: python3 -m py_compile scripts/*.py
 
-  templates:
-    name: template (${{ matrix.lang }})
+  scaffold:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        lang: [rust, go, python, ts, php, csharp, fsharp, zig]
+    timeout-minutes: 20
     defaults:
       run:
         shell: bash
     steps:
       - uses: actions/checkout@v7
-
-      - name: Install just and hyperfine
-        uses: taiki-e/install-action@v2
         with:
-          tool: just,hyperfine
+          submodules: true
 
-      - name: Set up Rust
-        if: matrix.lang == 'rust'
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Set up Go
-        if: matrix.lang == 'go'
-        uses: actions/setup-go@v7
+      - uses: ./lang-templates/.github/actions/setup-toolchains
         with:
-          go-version: stable
-          cache: false
-
-      - name: Set up uv
-        if: matrix.lang == 'python'
-        uses: astral-sh/setup-uv@v10
-
-      - name: Set up Bun
-        if: matrix.lang == 'ts'
-        uses: oven-sh/setup-bun@v2
-
-      - name: Set up PHP
-        if: matrix.lang == 'php'
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: "8.3"
-
-      - name: Set up .NET
-        if: matrix.lang == 'csharp' || matrix.lang == 'fsharp'
-        uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: 10.0.x
-
-      - name: Install Native AOT prerequisites
-        if: matrix.lang == 'csharp' || matrix.lang == 'fsharp'
-        run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev
-
-      - name: Set up Zig
-        if: matrix.lang == 'zig'
-        uses: mlugg/setup-zig@v2
-        with:
-          version: 0.17.0
+          lang: python
 
       # The checkout is disposable. Year repos created from this template
       # already have committed days (including day-01), which would make
@@ -98,7 +53,7 @@ jobs:
         run: rm -rf days benchmarks.md
 
       - name: Scaffold day 1
-        run: just new-day 1 ${{ matrix.lang }}
+        run: just new-day 1 python
 
       - name: Write sample input
         run: printf 'foo\nbar\nbaz\n' > days/day-01/input.txt
@@ -122,9 +77,9 @@ jobs:
           test -f days/day-01/bench.md
           grep -q '^## day-01' benchmarks.md
 
-      - name: Templates stayed clean
+      - name: Repo stayed clean
         run: |
-          status="$(git status --porcelain -- lang-templates scripts justfile README.md)"
+          status="$(git status --porcelain -- scripts justfile README.md lang-templates)"
           if [ -n "$status" ]; then
             echo "scaffolding modified tracked repo files:" >&2
             echo "$status" >&2
@@ -154,37 +109,12 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
-
-      - name: Install just and hyperfine
-        uses: taiki-e/install-action@v2
         with:
-          tool: just,hyperfine
+          submodules: true
 
-      - uses: dtolnay/rust-toolchain@stable
-
-      - uses: actions/setup-go@v7
+      - uses: ./lang-templates/.github/actions/setup-toolchains
         with:
-          go-version: stable
-          cache: false
-
-      - uses: astral-sh/setup-uv@v10
-
-      - uses: oven-sh/setup-bun@v2
-
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: "8.3"
-
-      - uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: 10.0.x
-
-      - name: Install Native AOT prerequisites
-        run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev
-
-      - uses: mlugg/setup-zig@v2
-        with:
-          version: 0.17.0
+          lang: all
 
       - name: Test all days
         run: just test-all

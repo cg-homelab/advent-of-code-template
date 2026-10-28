@@ -8,6 +8,13 @@ exposes the same `just` recipes regardless of language. Benchmarking is done
 with [hyperfine](https://github.com/sharkdp/hyperfine) against the built
 artifact directly, so the task-runner wrapper never affects the numbers.
 
+## Getting started
+
+Clone with `git clone --recurse-submodules <url>`, or run
+`git submodule update --init` in an existing clone. `lang-templates/` is the
+[aoc-lang-templates](https://github.com/cg-homelab/aoc-lang-templates)
+submodule.
+
 ## Requirements
 
 - [just](https://github.com/casey/just) — task runner
@@ -27,16 +34,17 @@ set windows-shell := ["sh", "-cu"]
 ## Workflow
 
 ```sh
-just new-day 3 rust     # scaffold days/day-03/ from lang-templates/rust
+just new-day 3 rust     # scaffold days/day-03/ from lang-templates/templates/rust
 # paste your puzzle input into days/day-03/input.txt
 just run 3 1            # run part 1
 just test 3             # tests against example input
 just bench 3            # hyperfine both parts -> days/day-03/bench.md, then refresh benchmarks.md
 just bench-all          # bench every day, then refresh benchmarks.md
 just test-all           # run every day's tests
+just update-templates   # pull newer language templates, then commit the submodule pointer
 ```
 
-Languages: `rust`, `go`, `python`, `ts`, `php`, `csharp`, `fsharp`, `zig` (see `lang-templates/`).
+Languages: `rust`, `go`, `python`, `ts`, `php`, `csharp`, `fsharp`, `zig` (see the [aoc-lang-templates](https://github.com/cg-homelab/aoc-lang-templates) repo).
 
 ## Per-day contract
 
@@ -63,12 +71,23 @@ relative columns are dropped, since they compare part 1 against part 2.
 
 ## CI
 
-`.github/workflows/ci.yml` scaffolds every language template on Ubuntu and
-runs test, run and bench on pushes, pull requests and a weekly schedule.
+`.github/workflows/ci.yml` runs on pushes, pull requests and a weekly schedule:
+
+- `scripts`: unit tests and byte-compilation of the scripts in `scripts/`.
+- `scaffold`: a smoke test that scaffolds day 1 from the pinned templates,
+  then runs test, run and bench on it.
+- `days`: `just test-all` over the committed days (skipped when there are none).
+
+Benchmarks are not run in CI because puzzle inputs are gitignored and runner
+timings are noisy; `benchmarks.md` is produced locally and committed.
+
+## Updating templates
+
+Run `just update-templates` to pull the latest language templates, then commit
+the changed `lang-templates` pointer. Dependabot also opens a PR when the
+templates repo moves.
 
 ## Adding a language
 
-Add a directory under `lang-templates/` containing a `justfile` with the four
-recipes above, `example1.txt`/`example2.txt`, and a placeholder solution. Use
-the literal token `__DAY__` anywhere the zero-padded day number should appear;
-`scripts/new_day.py` replaces it in file contents and names.
+See the README of the
+[aoc-lang-templates](https://github.com/cg-homelab/aoc-lang-templates) repo.

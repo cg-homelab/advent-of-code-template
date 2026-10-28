@@ -1,0 +1,4 @@
+[submodule "lang-templates"]
+	path = lang-templates
+	url = https://github.com/cg-homelab/aoc-lang-templates.git
+	branch = main

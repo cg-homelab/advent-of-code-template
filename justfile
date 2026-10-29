@@ -7,6 +7,10 @@
 # find the shared scripts no matter where just was started from.
 export AOC_SCRIPTS := justfile_directory() / "lang-templates" / "scripts"
 
+# Layout of benchmarks.md: single (one ranked table) or ranking (one table per day and part).
+# Override per call: just tablemode=ranking bench 3
+tablemode := "single"
+
 # List available recipes
 default:
     @just --list
@@ -46,12 +50,16 @@ test target: submodule
     d="$(python3 "$AOC_SCRIPTS/resolve_day.py" {{quote(target)}})" || exit 1
     exec just --justfile "$d/justfile" test
 
-# In-process benchmark, then refresh benchmarks.md: just bench 3 / just bench day-03-rust-v2 --time 3
+# In-process benchmark, then refresh benchmarks.json / benchmarks.md: just bench 3 / just bench day-03-rust-v2 --time 3
 bench target *args: submodule
     #!/usr/bin/env sh
     d="$(python3 "$AOC_SCRIPTS/resolve_day.py" {{quote(target)}})" || exit 1
     just --justfile "$d/justfile" bench {{args}} || exit 1
-    exec python3 "$AOC_SCRIPTS/collect_benches.py"
+    exec python3 "$AOC_SCRIPTS/collect_benches.py" --tablemode {{quote(tablemode)}}
+
+# Refresh benchmarks.json / benchmarks.md from existing bench.json files, no benchmarking: just benchmarks [single|ranking]
+benchmarks mode=tablemode: submodule
+    exec python3 "$AOC_SCRIPTS/collect_benches.py" --tablemode {{quote(mode)}}
 
 # Run every solution's tests; attempts all, exits non-zero if any failed
 test-all: submodule
@@ -71,7 +79,7 @@ test-all: submodule
         exit 1
     fi
 
-# Benchmark every solution (flags go to each bench), then refresh benchmarks.md (only if none failed)
+# Benchmark every solution (flags go to each bench), then refresh benchmarks.json / benchmarks.md (only if none failed)
 bench-all *args: submodule
     #!/usr/bin/env sh
     failed=""
@@ -88,4 +96,4 @@ bench-all *args: submodule
         echo "FAILED:$failed" >&2
         exit 1
     fi
-    exec python3 "$AOC_SCRIPTS/collect_benches.py"
+    exec python3 "$AOC_SCRIPTS/collect_benches.py" --tablemode {{quote(tablemode)}}

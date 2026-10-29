@@ -52,7 +52,7 @@ jobs:
       # may already have committed solutions for day 1, which would make the
       # scaffold land in day-01-python-vN and leave `just test 1` ambiguous.
       - name: Clear committed days
-        run: rm -rf days benchmarks.md
+        run: rm -rf days benchmarks.md benchmarks.json
 
       - name: Scaffold day 1
         run: just new-day 1 python
@@ -91,8 +91,10 @@ jobs:
                   assert isinstance(ns[key], (int, float)) and ns[key] >= 0, (p["part"], key, ns)
           print("bench.json ok")
           EOF
-          grep -q '^## day-01-python-v1$' benchmarks.md
-          grep -q '^| Part |' benchmarks.md
+          test -f benchmarks.json
+          grep -q '^| Day | Part | Rank |' benchmarks.md
+          grep -q '`day-01-python-v1`' benchmarks.md
+          grep -q '^## Runs$' benchmarks.md
 
       - name: Repo stayed clean
         run: |

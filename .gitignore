@@ -1,7 +1,7 @@
 # Puzzle inputs — AoC asks that these are not republished
 /days/*/input.txt
 
-# Per-solution bench output (aggregated into benchmarks.md)
+# Per-solution bench output (aggregated into benchmarks.json / benchmarks.md)
 # bench.md: pre-v3 solutions; bench.json: lang-templates v3+
 /days/*/bench.md
 /days/*/bench.json

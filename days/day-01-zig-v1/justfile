@@ -1,0 +1,17 @@
+# day-01-zig-v1
+
+solution := "./zig-out/bin/day-01-zig-v1"
+scripts := env("AOC_SCRIPTS", "../../lang-templates/scripts")
+
+build:
+    zig build -Doptimize=ReleaseFast
+
+run part: build
+    ./zig-out/bin/day-01-zig-v1 {{part}}
+
+test:
+    zig build test
+
+# In-process timing of both parts (+ hyperfine wall time if installed) -> bench.json
+bench *args: build
+    python3 "{{scripts}}/bench_day.py" --name day-01-zig-v1 {{args}} -- {{solution}}

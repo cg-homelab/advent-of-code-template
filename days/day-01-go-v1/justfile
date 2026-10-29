@@ -1,0 +1,17 @@
+# day-01-go-v1
+
+solution := "./solution"
+scripts := env("AOC_SCRIPTS", "../../lang-templates/scripts")
+
+build:
+    go build -o solution .
+
+run part:
+    go run . {{part}}
+
+test:
+    go test ./...
+
+# In-process timing of both parts (+ hyperfine wall time if installed) -> bench.json
+bench *args: build
+    python3 "{{scripts}}/bench_day.py" --name day-01-go-v1 {{args}} -- {{solution}}

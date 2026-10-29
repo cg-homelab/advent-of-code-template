@@ -1,0 +1,17 @@
+# day-01-csharp-v1 (.NET 10; bench uses a Native AOT publish)
+
+solution := "./out/day-01-csharp-v1"
+scripts := env("AOC_SCRIPTS", "../../lang-templates/scripts")
+
+build:
+    dotnet publish src -c Release -o out
+
+run part:
+    dotnet run --project src -c Release -- {{part}}
+
+test:
+    dotnet test tests
+
+# In-process timing of both parts (+ hyperfine wall time if installed) -> bench.json
+bench *args: build
+    python3 "{{scripts}}/bench_day.py" --name day-01-csharp-v1 {{args}} -- {{solution}}

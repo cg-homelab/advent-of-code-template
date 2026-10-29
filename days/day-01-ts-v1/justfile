@@ -1,0 +1,17 @@
+# day-01-ts-v1 (typescript, bun)
+
+solution := "./solution"
+scripts := env("AOC_SCRIPTS", "../../lang-templates/scripts")
+
+build:
+    bun build --compile --outfile solution main.ts
+
+run part:
+    bun main.ts {{part}}
+
+test:
+    bun test
+
+# In-process timing of both parts (+ hyperfine wall time if installed) -> bench.json
+bench *args: build
+    python3 "{{scripts}}/bench_day.py" --name day-01-ts-v1 {{args}} -- {{solution}}

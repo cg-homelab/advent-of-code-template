@@ -1,0 +1,17 @@
+# day-01-rust-v1
+
+solution := "./target/release/day-01-rust-v1"
+scripts := env("AOC_SCRIPTS", "../../lang-templates/scripts")
+
+build:
+    cargo build --release --quiet
+
+run part:
+    cargo run --release --quiet -- {{part}}
+
+test:
+    cargo test --quiet
+
+# In-process timing of both parts (+ hyperfine wall time if installed) -> bench.json
+bench *args: build
+    python3 "{{scripts}}/bench_day.py" --name day-01-rust-v1 {{args}} -- {{solution}}

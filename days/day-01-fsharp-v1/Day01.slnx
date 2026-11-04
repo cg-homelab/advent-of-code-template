@@ -1,4 +1,0 @@
-<Solution>
-  <Project Path="src/Day01.fsproj" />
-  <Project Path="tests/Day01.Tests.fsproj" />
-</Solution>

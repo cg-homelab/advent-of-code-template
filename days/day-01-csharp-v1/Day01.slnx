@@ -1,4 +1,0 @@
-<Solution>
-  <Project Path="src/Day01.csproj" />
-  <Project Path="tests/Day01.Tests.csproj" />
-</Solution>

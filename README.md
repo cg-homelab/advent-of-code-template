@@ -6,7 +6,7 @@ own directory under `days/`, named `day-NN-<lang>-vN` (`days/day-01-rust-v1`,
 `days/day-01-rust-v2`, `days/day-01-zig-v1`, …), so a day can be solved more
 than once, in the same language or another one. Every solution exposes the
 same `just` recipes regardless of language. Benchmarking is in-process: a
-shared Python driver (`lang-templates/scripts/bench_day.py`) asks the built
+shared driver (`aoc-toolkit bench`) asks the built
 executable to time only its `process()` call per part, so runtime startup and
 the task-runner wrapper never affect the numbers. When
 [hyperfine](https://github.com/sharkdp/hyperfine) is installed it adds the
@@ -15,16 +15,16 @@ whole-process wall time as an extra column.
 ## Getting started
 
 Clone with `git clone --recurse-submodules <url>`, or run
-`git submodule update --init` in an existing clone. `lang-templates/` is the
-[aoc-lang-templates](https://github.com/cg-homelab/aoc-lang-templates)
-submodule.
+`git submodule update --init` in an existing clone. `toolkit/` is the
+[aoc-toolkit](https://github.com/cg-homelab/aoc-toolkit)
+submodule: the language templates and the `aoc-toolkit` CLI.
 
 ## Requirements
 
 - [just](https://github.com/casey/just) 1.17 or newer — task runner
-- Python 3 (3.11+ for `just bench`) — scaffolding, benchmarking and aggregation scripts (stdlib only)
+- [uv](https://docs.astral.sh/uv/) — runs the `aoc-toolkit` CLI (scaffolding, benchmarking, aggregation); it installs Python 3.13 for the toolkit on first use. Needed for every language, not just python
 - Optional: [hyperfine](https://github.com/sharkdp/hyperfine) — adds the whole-process Wall column to benchmarks
-- Per language, only if you use it: `cargo` (rust), `go`, [`uv`](https://github.com/astral-sh/uv) (python), [`bun`](https://bun.sh) (ts), `php`, [.NET 10 SDK](https://dotnet.microsoft.com/download) (csharp, fsharp), [`zig`](https://ziglang.org/download/) 0.17+
+- Per language, only if you use it: `cargo` (rust), `go`, [`uv`](https://github.com/astral-sh/uv) (python, already required above), [`bun`](https://bun.sh) (ts), `php`, [.NET 10 SDK](https://dotnet.microsoft.com/download) (csharp, fsharp), [`zig`](https://ziglang.org/download/) 0.17+
 - C#/F# `just build` and `just bench` publish a Native AOT binary, which needs a C toolchain (Xcode Command Line Tools on macOS, `clang` + `zlib1g-dev` on Linux, the Visual Studio C++ workload on Windows). The first publish downloads the ILCompiler packages. `just run` uses `dotnet run` (JIT) for fast iteration, while `just bench` times the AOT binary.
   If your `dotnet` comes from Homebrew (a non-portable build), the AOT link step may fail with `ld: library 'ssl' not found`; fix it with `export LIBRARY_PATH=/opt/homebrew/opt/openssl@3/lib:/opt/homebrew/opt/brotli/lib`.
 
@@ -35,14 +35,13 @@ just at its shell by adding this to the root `justfile`:
 set windows-shell := ["sh", "-cu"]
 ```
 
-The recipes call `python3`; if your Python is only on PATH as `python`, add a
-`python3` alias or change the recipes accordingly. Windows has no peak-RSS
+Windows has no peak-RSS
 support in the harnesses, so the Peak RSS Δ column shows `n/a` there.
 
 ## Workflow
 
 ```sh
-just new-day 3 rust     # scaffold days/day-03-rust-v1/ from lang-templates/templates/rust
+just new-day 3 rust     # scaffold days/day-03-rust-v1/ from toolkit/templates/rust
 # paste your puzzle input into days/day-03-rust-v1/input.txt
 just run 3 1            # run part 1 (day 3 has one solution, so no question asked)
 just test 3             # tests against example input
@@ -72,9 +71,9 @@ number or a solution directory name (`day-03-rust-v2`, `days/` prefix
 optional). A day number with exactly one solution runs it directly. With
 several, an interactive terminal shows a numbered list to choose from; without
 a terminal (CI, pipes) the recipe fails and lists the candidates, so pass the
-directory name there. The lookup is done by `lang-templates/scripts/resolve_day.py`.
+directory name there. The lookup is done by `aoc-toolkit resolve`.
 
-Languages: `rust`, `go`, `python`, `ts`, `php`, `csharp`, `fsharp`, `zig` (see the [aoc-lang-templates](https://github.com/cg-homelab/aoc-lang-templates) repo).
+Languages: `rust`, `go`, `python`, `ts`, `php`, `csharp`, `fsharp`, `zig` (see the [aoc-toolkit](https://github.com/cg-homelab/aoc-toolkit) repo).
 
 ## Per-solution contract
 
@@ -93,8 +92,8 @@ The solution executable takes the part number as its only argument
 It also has a bench mode, `<cmd> bench <part> <input-path> <iterations>`,
 which times `process()` that many times and prints one JSON line for the
 driver; the protocol is described under
-[Executable contract](https://github.com/cg-homelab/aoc-lang-templates#executable-contract)
-in the templates README.
+[Executable contract](https://github.com/cg-homelab/aoc-toolkit#executable-contract)
+in the toolkit README.
 Templates ship a working placeholder (part 1: line count, part 2: total
 characters across lines) so everything passes right after scaffolding.
 
@@ -134,8 +133,8 @@ about a second (at least 10 iterations, plus warmup); for a very slow part use
 
 `.github/workflows/ci.yml` runs on pushes, pull requests and a weekly schedule:
 
-- `scripts`: the unit tests of the shared scripts in the `lang-templates`
-  submodule (`lang-templates/scripts`), at the pinned commit.
+- `toolkit`: the unit tests of the `aoc-toolkit` CLI in the `toolkit`
+  submodule (`uv run --directory toolkit --locked pytest -q`), at the pinned commit.
 - `scaffold`: a smoke test that scaffolds `day-01-python-v1` from the pinned
   templates, then runs test, run and bench on it and checks the `bench.json`
   answers, `benchmarks.json` and the ranked row in `benchmarks.md`.
@@ -149,8 +148,30 @@ locally and committed together with `benchmarks.json`.
 ## Updating templates
 
 Run `just update-templates` to pull the latest language templates, then commit
-the changed `lang-templates` pointer. Dependabot also opens a PR when the
+the changed `toolkit` pointer. Dependabot also opens a PR when the
 templates repo moves.
+
+## Migrating an existing year repo to toolkit v5
+
+The `lang-templates` submodule became `toolkit` (the `aoc-toolkit` repo), and
+its Python scripts became one CLI, `aoc-toolkit`, run through uv. A year repo
+on lang-templates v3/v4 is migrated once:
+
+1. Rename and move the submodule to the tag:
+   `git mv lang-templates toolkit`, set `url` in `.gitmodules` to
+   `https://github.com/cg-homelab/aoc-toolkit.git`, then
+   `git submodule sync && git -C toolkit fetch --tags && git -C toolkit checkout v5.0.0 && git add .gitmodules toolkit`.
+2. Replace the root `justfile` and `.github/workflows/ci.yml` with the ones
+   from this template repo (keep any local additions, such as the Windows
+   `set windows-shell` line).
+3. In every `days/*/justfile`, replace line 4 (the `scripts` variable) with
+   `toolkit := env("AOC_TOOLKIT", "../../toolkit")` and the `bench` recipe
+   body with the `uv run` line; copy both from
+   `toolkit/templates/<lang>/justfile` with `__NAME__` replaced by the
+   solution's directory name.
+4. Install [uv](https://docs.astral.sh/uv/) if you do not have it; it is now
+   required for every language.
+5. Run `just test-all`, then `just bench-all`, and commit.
 
 ## Migrating an existing year repo to lang-templates v3
 
@@ -182,4 +203,4 @@ from an older version of this template is migrated once:
 ## Adding a language
 
 See the README of the
-[aoc-lang-templates](https://github.com/cg-homelab/aoc-lang-templates) repo.
+[aoc-toolkit](https://github.com/cg-homelab/aoc-toolkit) repo.
